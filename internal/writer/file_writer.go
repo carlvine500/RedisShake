@@ -28,35 +28,35 @@ type FileWriterOptions struct {
 	Filepath string `mapstructure:"filepath" default:""`
 }
 
-type cmdWriter struct {
+type fileWriter struct {
 	format FileFormatWriter
 	path   string
 	DbId   int
 	ch     chan *entry.Entry
 	chWg   sync.WaitGroup
 	stat   struct {
-		CmdCount int `json:"cmd_count"`
+		EntryCount int `json:"entry_count"`
 	}
 }
 
-func (w *cmdWriter) Write(e *entry.Entry) {
+func (w *fileWriter) Write(e *entry.Entry) {
 	w.ch <- e
 }
 
-func (w *cmdWriter) Close() {
+func (w *fileWriter) Close() {
 	close(w.ch)
 	w.chWg.Wait()
 }
 
-func (w *cmdWriter) Status() interface{} {
+func (w *fileWriter) Status() interface{} {
 	return w.stat
 }
 
-func (w *cmdWriter) StatusString() string {
-	return fmt.Sprintf("exported cmd count=%d", w.stat.CmdCount)
+func (w *fileWriter) StatusString() string {
+	return fmt.Sprintf("exported entry count=%d", w.stat.EntryCount)
 }
 
-func (w *cmdWriter) StatusConsistent() bool {
+func (w *fileWriter) StatusConsistent() bool {
 	return true
 }
 
@@ -67,17 +67,17 @@ func NewFileWriter(ctx context.Context, opts *FileWriterOptions, format FileForm
 		log.Panicf("NewFileWriter[%s]: filepath.Abs error: %s", format, err.Error())
 	}
 	log.Infof("NewFileWriter[%s]: absolute path=[%s]", format, absolutePath)
-	w := &cmdWriter{
+	w := &fileWriter{
 		format: format,
 		DbId:   0,
 		path:   absolutePath,
 		ch:     make(chan *entry.Entry),
 	}
-	w.stat.CmdCount = 0
+	w.stat.EntryCount = 0
 	return w
 }
 
-func (w *cmdWriter) StartWrite(ctx context.Context) (ch chan *entry.Entry) {
+func (w *fileWriter) StartWrite(ctx context.Context) (ch chan *entry.Entry) {
 	w.chWg = sync.WaitGroup{}
 	w.chWg.Add(1)
 	go w.processWrite(ctx)
@@ -85,7 +85,7 @@ func (w *cmdWriter) StartWrite(ctx context.Context) (ch chan *entry.Entry) {
 
 }
 
-func (w *cmdWriter) processWrite(ctx context.Context) {
+func (w *fileWriter) processWrite(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
 	file, err := os.Create(w.path)
@@ -107,13 +107,13 @@ func (w *cmdWriter) processWrite(ctx context.Context) {
 				writer.Flush()
 				return
 			}
-			w.stat.CmdCount++
+			w.stat.EntryCount++
 			w.writeEntry(writer, e)
 		}
 	}
 }
 
-func (w *cmdWriter) writeEntry(writer *bufio.Writer, e *entry.Entry) {
+func (w *fileWriter) writeEntry(writer *bufio.Writer, e *entry.Entry) {
 	switch w.format {
 	case CMDWriter:
 		writer.WriteString(strings.Join(e.Argv, " ") + "\n")
