@@ -14,27 +14,28 @@ import (
 	"time"
 )
 
-type FileFormatWriter string
+type FileType string
 
 const (
-	AOFWriter  FileFormatWriter = "aof_writer"
-	CMDWriter  FileFormatWriter = "cmd_writer"
-	JSONWriter FileFormatWriter = "json_writer"
+	AOF  FileType = "aof"
+	CMD  FileType = "cmd"
+	JSON FileType = "json"
 )
 
-var FileFormatWriters = []FileFormatWriter{AOFWriter, CMDWriter, JSONWriter}
+var FileTypes = []FileType{CMD, AOF, JSON}
 
 type FileWriterOptions struct {
 	Filepath string `mapstructure:"filepath" default:""`
+	FileType string `mapstructure:"type" default:"cmd"`
 }
 
 type fileWriter struct {
-	format FileFormatWriter
-	path   string
-	DbId   int
-	ch     chan *entry.Entry
-	chWg   sync.WaitGroup
-	stat   struct {
+	fileType FileType
+	path     string
+	DbId     int
+	ch       chan *entry.Entry
+	chWg     sync.WaitGroup
+	stat     struct {
 		EntryCount int `json:"entry_count"`
 	}
 }
@@ -60,18 +61,17 @@ func (w *fileWriter) StatusConsistent() bool {
 	return true
 }
 
-func NewFileWriter(ctx context.Context, opts *FileWriterOptions, format FileFormatWriter) Writer {
-	log.Infof("NewFileWriter[%s]: path=[%s]", format, opts.Filepath)
+func NewFileWriter(ctx context.Context, opts *FileWriterOptions) Writer {
 	absolutePath, err := filepath.Abs(opts.Filepath)
 	if err != nil {
-		log.Panicf("NewFileWriter[%s]: filepath.Abs error: %s", format, err.Error())
+		log.Panicf("NewFileWriter path=[%s]: filepath.Abs error: %s", opts.Filepath, err.Error())
 	}
-	log.Infof("NewFileWriter[%s]: absolute path=[%s]", format, absolutePath)
+	log.Infof("NewFileWriter absolute path=[%s],type=[%s]", absolutePath, opts.FileType)
 	w := &fileWriter{
-		format: format,
-		DbId:   0,
-		path:   absolutePath,
-		ch:     make(chan *entry.Entry),
+		fileType: FileType(opts.FileType),
+		DbId:     0,
+		path:     absolutePath,
+		ch:       make(chan *entry.Entry),
 	}
 	w.stat.EntryCount = 0
 	return w
@@ -114,12 +114,12 @@ func (w *fileWriter) processWrite(ctx context.Context) {
 }
 
 func (w *fileWriter) writeEntry(writer *bufio.Writer, e *entry.Entry) {
-	switch w.format {
-	case CMDWriter:
+	switch w.fileType {
+	case CMD:
 		writer.WriteString(strings.Join(e.Argv, " ") + "\n")
-	case AOFWriter:
+	case AOF:
 		writer.Write(e.Serialize())
-	case JSONWriter:
+	case JSON:
 		// compute SerializeSize for json result
 		e.Serialize()
 		json, _ := json.Marshal(e)
