@@ -16,7 +16,7 @@ type = "cmd" #cmd,aof,json (default cmd)
 ## 应用场景
 - 俩系统共享数据: 一个系统把文件写到 disk/s3/oss, 另一系统从中读取.
 - 跨系统局部迁移带指定前缀的数据: 从A系统迁出带前缀"XXX:"的数据, B系统通过命令导入这些数据 `redis-cli --pipe XXX.aof` .
-- 通过命令文件订正数据: 从一个系统中导出数据成cmd格式, 订正后再导入.
+- 通过命令文件订正数据: 从一个系统中导出数据成cmd格式, 订正后再导入命令`redis-cli < cmd.txt`.
 - 通过json格式做数据分析: 导出成json文件, 导入到mongodb/bi做分析.
 
 ## 示例输出

@@ -16,8 +16,8 @@ type = "cmd" #cmd,aof,json (default cmd)
 * An absolute filepath should be passed in.
 ## application scenarios
 - share data between two system: one system write aof to disk/s3/oss, another system read file from them.
-- partial migrate data with business prefix: extract aof with prefix "biz:" data from A system, B system import the aof with command `redis-cli --pipe xxx.aof` .
-- fix data by cmd file: export cmd data from one system, fix wrong data, and then import cmd file.
+- partial migrate data with business prefix: extract aof with prefix "XXX:" data from A system, B system import the aof with command `redis-cli --pipe XXX.aof` .
+- fix data by cmd file: export cmd data from one system, fix wrong data, and then import cmd file with command `redis-cli < cmd.txt`.
 - analysis data with json: export json file, and then import them into mongodb/bi to analysis.
 
 ## example output:
